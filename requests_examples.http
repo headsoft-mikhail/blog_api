@@ -1,0 +1,102 @@
+# примеры API-запросов доступных для всех пользователей
+
+@baseUrl = http://127.0.0.1:8000/api/v1
+
+# @email = "hello2@hello.ru"
+@email = "maafanasiev@mail.ru"
+@password = "new_password2"
+@confirm_token = "822ba"
+@session_token = a9a2e2f22151a60f0385a04bb2f79176c6482e62
+@chng_pswrd_token = "4e2e5"
+
+###
+# создать пользователя
+POST {{baseUrl}}/accounts/
+Content-Type: application/json
+
+{
+  "first_name": "user1_first_name",
+  "last_name": "user1_last_name",
+  "email": {{email}},
+  "password": {{password}}
+}
+
+###
+#активировать пользователя
+POST {{baseUrl}}/confirm/
+Content-Type: application/json
+
+{
+  "token": {{confirm_token}},
+  "email": {{email}}
+}
+
+###
+#логин
+POST {{baseUrl}}/login/
+Content-Type: application/json
+
+{
+  "password": {{password}},
+  "email": {{email}}
+}
+
+###
+#логаут
+DELETE {{baseUrl}}/login/6/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+###
+# получить данные всех пользователей
+GET {{baseUrl}}/accounts/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+###
+# получить данные пользователя
+GET {{baseUrl}}/accounts/22
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+###
+# изменить данные пользователя
+PATCH {{baseUrl}}/accounts/22/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+{
+  "first_name": "user2_first_name"
+}
+
+###
+# удалить пользователя
+DELETE {{baseUrl}}/accounts/22/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+
+
+
+
+###
+# сброс пароля
+POST {{baseUrl}}/user/password_reset
+Content-Type: application/json
+
+{
+  "email": {{email}}
+}
+
+###
+# сброс пароля - подтверждение
+POST {{baseUrl}}/user/password_reset/confirm
+Content-Type: application/json
+
+{
+  "email": {{email}},
+  "password": "new_password2",
+  "token": {{chng_pswrd_token}}
+}
+
+
