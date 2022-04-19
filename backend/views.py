@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from rest_framework.mixins import DestroyModelMixin
 from rest_framework.response import Response
 from django_filters import rest_framework as filters
 from rest_framework.viewsets import ViewSet, ModelViewSet
@@ -15,11 +16,10 @@ from backend.tasks import on_new_user_registered, on_account_deleted
 
 
 # Create your views here.
-class LoginViewSet(ViewSet):
-    """
-    Для входа/выхода из аккаунта
-    """
+class LoginViewSet(ViewSet, DestroyModelMixin):
+    """Для входа/выхода из аккаунта"""
     def create(self, request, *args, **kwargs):
+        """Вход в аккаунт, генерация токена"""
         user = authenticate(request,
                             username=request.data.get('email', None),
                             password=request.data.get('password', None))
@@ -33,6 +33,7 @@ class LoginViewSet(ViewSet):
                         status=status.HTTP_403_FORBIDDEN)
 
     def destroy(self, request, *args, **kwargs):
+        """Выход из аккаунта, удаление токена"""
         token = Token.objects.get(user_id=request.user.id)
         if token:
             self.perform_destroy(token)
@@ -52,22 +53,21 @@ class LoginViewSet(ViewSet):
 
 
 class AccountViewSet(ModelViewSet):
-    """
-    Для создания/просмотра/редактирования/удаления аккаунтов
-    """
+    """Для создания/просмотра/редактирования/удаления аккаунтов"""
     queryset = User.objects.all()
 
-    def create(self, request, *args, **kwargs):
-        """Создание аккаунта"""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
         serializer.instance.set_password(serializer.instance.password)
         serializer.instance.save()
         token, _ = ConfirmEmailToken.objects.get_or_create(user_id=serializer.instance.id)
         on_new_user_registered.delay(serializer.instance.email, token.key)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        if 'password' in serializer.validated_data.keys():
+            serializer.instance.set_password(serializer.instance.password)
+        serializer.instance.save()
 
     def destroy(self, request, *args, **kwargs):
         """Удаление аккаунта"""
@@ -96,14 +96,10 @@ class AccountViewSet(ModelViewSet):
 
 class ConfirmAccountViewSet(ModelViewSet):
     serializer_class = ConfirmEmailSerializer
-    """
-    Класс для подтверждения почтового адреса
-    """
+    """Класс для подтверждения почтового адреса"""
 
     def create(self, request):
-        """
-        Подтверждение почтового адреса
-        """
+        """Подтверждение почтового адреса"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)

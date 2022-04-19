@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework.authtoken',
     'phonenumber_field',
-    'backend'
+    'backend',
+    'django_rest_passwordreset',
 ]
 
 MIDDLEWARE = [
