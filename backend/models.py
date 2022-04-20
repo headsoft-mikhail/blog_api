@@ -64,7 +64,7 @@ class User(AbstractUser):
                                  verbose_name='Никнейм',
                                  blank=True)
     public_phone_number = PhoneNumberField(verbose_name='Номер телефона',
-                                    blank=True)
+                                           blank=True)
     public_url = models.URLField(verbose_name='Сайт/соцсеть',
                                  blank=True)
     public_email = models.EmailField(verbose_name='Email',
@@ -94,11 +94,6 @@ class Post(models.Model):
                               blank=False)
     content = models.TextField(verbose_name='Текст',
                                blank=False)
-    commented_post = models.ForeignKey('self',
-                                       verbose_name='Относится к публикации',
-                                       related_name='child_posts',
-                                       on_delete=models.CASCADE,
-                                       blank=True)
     nesting_level = models.PositiveIntegerField(verbose_name='Уровень вложенности',
                                                 default=0)
 
@@ -110,6 +105,21 @@ class Post(models.Model):
     def __str__(self):
         return f'{super().__str__()}\n' \
                f'{self.content}'
+
+
+class ParentsChildren(models.Model):
+    parent = models.ForeignKey(Post,
+                               verbose_name='Предок',
+                               related_name='child',
+                               on_delete=models.CASCADE)
+    child = models.ForeignKey(Post,
+                              verbose_name='Потомок',
+                              related_name='parent',
+                              on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ("parent", "child")
+        verbose_name_plural = "Публикации и комментарии"
 
 
 class NotViewedPost(models.Model):
@@ -125,6 +135,7 @@ class NotViewedPost(models.Model):
 
     class Meta:
         verbose_name_plural = "Непросмотренные публикации"
+
     unique_together = ("user", "post")
 
 

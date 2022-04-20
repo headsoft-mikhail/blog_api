@@ -9,8 +9,8 @@ from django.contrib.auth import authenticate
 
 from backend.permissions import IsAuthenticated, IsNotAuthenticated, IsOwnerOrAdmin, IsActive
 from backend.serializers import UserMainInfoSerializer, UserSerializer, PostSerializer, SubscriptionSerializer, \
-    ConfirmEmailSerializer
-from backend.models import User, Post, UserSubscription, ConfirmEmailToken
+    SubscriberSerializer, ConfirmEmailSerializer
+from backend.models import User, Post, UserSubscription, ConfirmEmailToken, ParentsChildren
 from backend.filters import PostsFilter
 from backend.tasks import on_new_user_registered, on_account_deleted
 
@@ -18,6 +18,7 @@ from backend.tasks import on_new_user_registered, on_account_deleted
 # Create your views here.
 class LoginViewSet(ViewSet, DestroyModelMixin):
     """Для входа/выхода из аккаунта"""
+
     def create(self, request, *args, **kwargs):
         """Вход в аккаунт, генерация токена"""
         user = authenticate(request,
@@ -65,7 +66,7 @@ class AccountViewSet(ModelViewSet):
 
     def perform_update(self, serializer):
         super().perform_update(serializer)
-        if 'password' in serializer.validated_data.keys():
+        if "password" in serializer.validated_data.keys():
             serializer.instance.set_password(serializer.instance.password)
         serializer.instance.save()
 
@@ -88,7 +89,7 @@ class AccountViewSet(ModelViewSet):
             return []
 
     def get_serializer_class(self):
-        if self.action in ['list']:
+        if self.action in ["list"]:
             return UserMainInfoSerializer
         else:
             return UserSerializer
@@ -114,20 +115,92 @@ class ConfirmAccountViewSet(ModelViewSet):
                             headers=headers)
 
 
+class SubscriptionsViewSet(ModelViewSet):
+    """Для создания/просмотра/удаления подписок"""
+    serializer_class = SubscriptionSerializer
+
+    def get_queryset(self):
+        if self.action in ["list"]:
+            return UserSubscription.objects.filter(owner=self.request.user).order_by("created_at")
+        else:
+            return UserSubscription.objects.none()
+
+    def perform_create(self, serializer):
+        """Создание подписки"""
+        serializer.save(owner=self.request.user,
+                        author=User.objects.get(id=self.request.data.get('author', None)))
+
+    def destroy(self, request, *args, **kwargs):
+        """Отписка"""
+        instance = UserSubscription.objects.filter(owner=self.request.user, author=kwargs['pk'])
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_permissions(self):
+        if self.action in ["list", "create"]:
+            return [IsActive()]
+        elif self.action in ["destroy"]:
+            return [IsOwnerOrAdmin()]
+        else:
+            return []
+
+
+class SubscribersViewSet(ModelViewSet):
+    """Для просмотра подписчиков"""
+    serializer_class = SubscriberSerializer
+    queryset = UserSubscription.objects.none()
+
+    def get_queryset(self):
+        return UserSubscription.objects.filter(author=self.request.user).order_by("created_at")
+
+    def get_permissions(self):
+        if self.action in ["list"]:
+            return [IsActive()]
+        else:
+            return []
+
+
 class PostsViewSet(ModelViewSet):
     """Для создания/удаления/редактирования постов."""
-    queryset = Post.objects.select_related('owner').order_by('-created_at')
+    # queryset = Post.objects.select_related('owner').order_by('-created_at')
     serializer_class = PostSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = PostsFilter
 
     def perform_create(self, serializer):
-        """Создание поста"""
-        serializer.save(owner=self.request.user)
+        if 'parent_id' in self.request.data.keys():
+            parent = Post.objects.get(id=self.request.data['parent_id'])
+            child = serializer.save(owner=self.request.user, nesting_level=parent.nesting_level + 1)
+            ParentsChildren(parent=parent, child=child).save()
+            ParentsChildren.objects.bulk_create(
+                [
+                    ParentsChildren(parent=item.parent, child=child)
+                    for item
+                    in ParentsChildren.objects.prefetch_related('parent').filter(child=parent)
+                ])
+        else:
+            serializer.save(owner=self.request.user)
+
+    # def retrieve(self, request, *args, **kwargs):
+    #     if "parent_id" in self.request.data.keys():
+    #         return super().list(request, *args, **kwargs)
+    #     else:
+    #         return super().retrieve(request, *args, **kwargs)
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        if "parent_id" in self.request.data.keys():
+            for item in response.data['results']:
+                print(item)
+            response.data['results'] = [item
+                                        for item in
+                                        response.data['results']
+                                        if request.data['parent_id'] in item['parent']]
+        return response
 
     def get_permissions(self):
         """Получение прав для действий."""
-        if self.action in ["retrieve", "create"]:
+        if self.action in ["list", "retrieve"]:
             return [IsAuthenticated()]
         elif self.action in ["create"]:
             return [IsActive()]
@@ -136,24 +209,30 @@ class PostsViewSet(ModelViewSet):
         else:
             return []
 
-
-class SubscriptionsViewSet(ModelViewSet):
-    """Для подписок."""
-    serializer_class = SubscriptionSerializer
-    queryset = UserSubscription.objects.none()
-
     def get_queryset(self):
-        return UserSubscription.objects.filter(owner=self.request.user).order_by("created_at")
+        queryset = Post.objects.select_related('owner').order_by('-created_at')
+        if "parent_id" in self.request.data.keys():
+            parent = Post.objects.get(id=self.request.data['parent_id'])
+            queryset = ParentsChildren.objects.prefetch_related('parent').filter(parent=parent)
+        return queryset
 
-    def perform_create(self, serializer):
-        """Создание подписки"""
-        serializer.save(owner=self.request.user)
+
+class FeedViewSet(ModelViewSet):
+    """Для создания/удаления/редактирования постов."""
+    queryset = Post.objects.select_related('owner').order_by('-created_at')
+    serializer_class = PostSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = PostsFilter
+
+    def list(self, request, *args, **kwargs):
+        authors = [item.author.id for item in UserSubscription.objects.filter(owner=self.request.user.id)]
+        self.queryset = Post.objects.select_related('owner').order_by('-created_at').filter(owner_id__in=authors)
+        response = super().list(request, *args, **kwargs)
+        return response
 
     def get_permissions(self):
         """Получение прав для действий."""
-        if self.action in ["retrieve", "create"]:
-            return [IsActive()]
-        elif self.action in ["destroy"]:
-            return [IsOwnerOrAdmin()]
+        if self.action in ["list"]:
+            return [IsAuthenticated()]
         else:
             return []

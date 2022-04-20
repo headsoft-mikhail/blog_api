@@ -1,32 +1,5 @@
 from rest_framework import serializers
-from backend.models import User, Post, UserSubscription, ConfirmEmailToken
-
-
-class DynamicModelSerializer(serializers.ModelSerializer):
-    """
-    A ModelSerializer that takes an additional `fields` argument that
-    controls which fields should be displayed, and takes in a "nested"
-    argument to return nested serializers
-    """
-
-    def __init__(self, *args, **kwargs):
-        include = kwargs.pop("include", None)
-        exclude = kwargs.pop("exclude", None)
-        depth = kwargs.pop("depth", None)
-
-        if depth is not None:
-            self.Meta.depth = depth
-
-        super(DynamicModelSerializer, self).__init__(*args, **kwargs)
-
-        if include is not None:
-            for field in include:
-                if field not in self.fields:
-                    self.Meta.fields.append(field)
-
-        if exclude is not None:
-            for field_name in exclude:
-                self.Meta.fields.pop(field_name)
+from backend.models import User, Post, UserSubscription, ConfirmEmailToken, ParentsChildren
 
 
 class ConfirmEmailSerializer(serializers.Serializer):
@@ -53,16 +26,35 @@ class ConfirmEmailSerializer(serializers.Serializer):
 
 class UserMainInfoSerializer(serializers.ModelSerializer):
     """Пользователи (сокращенный)"""
+
     class Meta:
         model = User
         fields = ('id', 'first_name', 'last_name', 'nick_name')
-        read_only_fields = ('id', )
+        read_only_fields = ('id',)
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """Подписки"""
+    author = UserMainInfoSerializer(read_only=True, required=False)
+
+    class Meta:
+        model = UserSubscription
+        fields = ['author', 'created_at']
+
+
+class SubscriberSerializer(serializers.ModelSerializer):
+    """Подписчики"""
+    owner = UserMainInfoSerializer(read_only=True)
+
+    class Meta:
+        model = UserSubscription
+        fields = ['owner', 'created_at']
 
 
 class UserSerializer(serializers.ModelSerializer):
     """Пользователи"""
-    subscribers = UserMainInfoSerializer(read_only=True, many=True)
-    subscriptions = UserMainInfoSerializer(read_only=True, many=True)
+    subscribers = SubscriptionSerializer(read_only=True, many=True)
+    subscriptions = SubscriberSerializer(read_only=True, many=True)
 
     class Meta:
         model = User
@@ -74,30 +66,11 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
 
-class PostSerializer(DynamicModelSerializer):
+class PostSerializer(serializers.ModelSerializer):
     """Публикации"""
     owner = UserMainInfoSerializer(read_only=True)
 
     class Meta:
         model = Post
-        fields = ('id', 'created_at', 'owner', 'content', 'nesting_level')
-        read_only_fields = ('id',)
-
-    def get_fields(self):
-        fields = super(PostSerializer, self).get_fields()
-        fields['comments'] = PostSerializer(many=True)
-        return fields
-
-
-class SubscriptionSerializer(serializers.ModelSerializer):
-    """Подписки"""
-    owner = UserMainInfoSerializer(read_only=True)
-    author = UserMainInfoSerializer(read_only=True)
-
-    class Meta:
-        model = UserSubscription
-        fields = ['owner', 'author', 'created_at']
-
-
-
-
+        fields = ['id', 'created_at', 'owner', 'content', 'parent', 'child', 'nesting_level']
+        read_only_fields = ('id', 'parent', 'child')
