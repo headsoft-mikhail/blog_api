@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from backend.models import User, Post, UserSubscription, ConfirmEmailToken, ParentsChildren
+from backend.models import User, Post, UserSubscription, ConfirmEmailToken
 
 
 class ConfirmEmailSerializer(serializers.Serializer):

@@ -45,6 +45,7 @@ class LoginViewSet(ViewSet, DestroyModelMixin):
                             status=status.HTTP_400_BAD_REQUEST)
 
     def get_permissions(self):
+        """Получение прав для действий."""
         if self.action in ["create"]:
             return [IsNotAuthenticated()]
         elif self.action in ["destroy"]:
@@ -79,6 +80,7 @@ class AccountViewSet(ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_permissions(self):
+        """Получение прав для действий."""
         if self.action in ["create"]:
             return [IsNotAuthenticated()]
         elif self.action in ["update", "partial_update", "destroy"]:
@@ -96,8 +98,8 @@ class AccountViewSet(ModelViewSet):
 
 
 class ConfirmAccountViewSet(ModelViewSet):
-    serializer_class = ConfirmEmailSerializer
     """Класс для подтверждения почтового адреса"""
+    serializer_class = ConfirmEmailSerializer
 
     def create(self, request):
         """Подтверждение почтового адреса"""
@@ -154,6 +156,7 @@ class SubscribersViewSet(ModelViewSet):
         return UserSubscription.objects.filter(author=self.request.user).order_by("created_at")
 
     def get_permissions(self):
+        """Получение прав для действий."""
         if self.action in ["list"]:
             return [IsActive()]
         else:
@@ -162,12 +165,13 @@ class SubscribersViewSet(ModelViewSet):
 
 class PostsViewSet(ModelViewSet):
     """Для создания/удаления/редактирования постов."""
-    # queryset = Post.objects.select_related('owner').order_by('-created_at')
+    queryset = Post.objects.select_related('owner').order_by('-created_at')
     serializer_class = PostSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = PostsFilter
 
     def perform_create(self, serializer):
+        """Создание новой публикации/комментария с записью его потомком во всех его родителей"""
         if 'parent_id' in self.request.data.keys():
             parent = Post.objects.get(id=self.request.data['parent_id'])
             child = serializer.save(owner=self.request.user, nesting_level=parent.nesting_level + 1)
@@ -181,22 +185,23 @@ class PostsViewSet(ModelViewSet):
         else:
             serializer.save(owner=self.request.user)
 
-    # def retrieve(self, request, *args, **kwargs):
-    #     if "parent_id" in self.request.data.keys():
-    #         return super().list(request, *args, **kwargs)
-    #     else:
-    #         return super().retrieve(request, *args, **kwargs)
-
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
-        if "parent_id" in self.request.data.keys():
-            for item in response.data['results']:
-                print(item)
-            response.data['results'] = [item
-                                        for item in
-                                        response.data['results']
-                                        if request.data['parent_id'] in item['parent']]
-        return response
+    def retrieve(self, request, *args, **kwargs):
+        """Просмотр публикации/поста,
+        при указании nests_down в ответе будут также комментарии вложенностью
+        ниже самой публикации на указанное значение"""
+        nests_down = self.request.data.get('nests_down', None)
+        post = Post.objects.filter(id=kwargs['pk'])
+        if nests_down == "all":
+            children = Post.objects.prefetch_related('parent').order_by('-created_at').filter(
+                parent__parent__id=kwargs['pk'], nesting_level__gte=post.first().nesting_level)
+        elif type(nests_down) is int:
+            children = Post.objects.prefetch_related('parent').order_by('-created_at').filter(
+                parent__parent__id=kwargs['pk'], nesting_level__lte=post.first().nesting_level + nests_down)
+        else:
+            self.queryset = post
+            return super().retrieve(request, *args, **kwargs)
+        self.queryset = (post | children).distinct()
+        return super().list(request, *args, **kwargs)
 
     def get_permissions(self):
         """Получение прав для действий."""
@@ -204,27 +209,21 @@ class PostsViewSet(ModelViewSet):
             return [IsAuthenticated()]
         elif self.action in ["create"]:
             return [IsActive()]
-        elif self.action in ["update", "partial_update", "destroy"]:
+        elif self.action in ["destroy"]:
             return [IsOwnerOrAdmin()]
         else:
             return []
 
-    def get_queryset(self):
-        queryset = Post.objects.select_related('owner').order_by('-created_at')
-        if "parent_id" in self.request.data.keys():
-            parent = Post.objects.get(id=self.request.data['parent_id'])
-            queryset = ParentsChildren.objects.prefetch_related('parent').filter(parent=parent)
-        return queryset
-
 
 class FeedViewSet(ModelViewSet):
     """Для создания/удаления/редактирования постов."""
-    queryset = Post.objects.select_related('owner').order_by('-created_at')
+    queryset = Post.objects.none()
     serializer_class = PostSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = PostsFilter
 
     def list(self, request, *args, **kwargs):
+        """Просмотр ленты"""
         authors = [item.author.id for item in UserSubscription.objects.filter(owner=self.request.user.id)]
         self.queryset = Post.objects.select_related('owner').order_by('-created_at').filter(owner_id__in=authors)
         response = super().list(request, *args, **kwargs)
