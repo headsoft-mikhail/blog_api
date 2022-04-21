@@ -134,7 +134,7 @@ class SubscriptionsViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """Отписка"""
-        instance = UserSubscription.objects.filter(owner=self.request.user, author=kwargs['pk'])
+        instance = UserSubscription.objects.filter(owner=self.request.user, author=kwargs['pk']).first()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 

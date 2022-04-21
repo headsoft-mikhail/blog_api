@@ -1,13 +1,14 @@
 # примеры API-запросов доступных для всех пользователей
 
 @baseUrl = http://127.0.0.1:8000/api/v1
+@baseUrl = http://0.0.0.0:8080/api/v1
 
 # @email = "hello2@hello.ru"
 @email = "maafanasiev@mail.ru"
 @password = "new_password2"
-@confirm_token = "822ba"
-@session_token = a9a2e2f22151a60f0385a04bb2f79176c6482e62
-@chng_pswrd_token = "4e2e5"
+@confirm_token = "f9a8d"
+@session_token = 9596d072c8c962bf80e8f63ece9691a8ba46724b
+@chng_pswrd_token = "f23a2"
 
 ###
 # создать пользователя
@@ -51,37 +52,32 @@ Authorization: Token {{session_token}}
 # получить данные всех пользователей
 GET {{baseUrl}}/accounts/
 Content-Type: application/json
-Authorization: Token {{session_token}}
 
 ###
 # получить данные пользователя
-GET {{baseUrl}}/accounts/22
+GET {{baseUrl}}/accounts/1
 Content-Type: application/json
 Authorization: Token {{session_token}}
 
 ###
 # изменить данные пользователя
-PATCH {{baseUrl}}/accounts/22/
+PATCH {{baseUrl}}/accounts/1/
 Content-Type: application/json
 Authorization: Token {{session_token}}
 
 {
-  "first_name": "user2_first_name"
+  "first_name": "Mikahill"
 }
 
 ###
 # удалить пользователя
-DELETE {{baseUrl}}/accounts/22/
+DELETE {{baseUrl}}/accounts/1/
 Content-Type: application/json
 Authorization: Token {{session_token}}
 
-
-
-
-
 ###
 # сброс пароля
-POST {{baseUrl}}/user/password_reset
+POST {{baseUrl}}/password_reset/
 Content-Type: application/json
 
 {
@@ -90,7 +86,7 @@ Content-Type: application/json
 
 ###
 # сброс пароля - подтверждение
-POST {{baseUrl}}/user/password_reset/confirm
+POST {{baseUrl}}/password_confirm/
 Content-Type: application/json
 
 {
@@ -99,4 +95,87 @@ Content-Type: application/json
   "token": {{chng_pswrd_token}}
 }
 
+###
+# подписаться на пользователя
+POST {{baseUrl}}/subscriptions/
+Content-Type: application/json
+Authorization: Token {{session_token}}
 
+{
+  "author": 1
+}
+
+###
+# отписаться от пользователя
+DELETE {{baseUrl}}/subscriptions/1/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+###
+# Просмотр подписок
+GET {{baseUrl}}/subscriptions/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+###
+# Просмотр подписчиков
+GET {{baseUrl}}/subscribers/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+###
+# Просмотр всех постов
+GET {{baseUrl}}/posts/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+###
+# Просмотр поста по id
+GET {{baseUrl}}/posts/1/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+###
+# Просмотр поста по id  с получением комментариев 
+GET {{baseUrl}}/posts/2/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+{
+  "nests_down": 1
+}
+
+###
+# Удаление поста по id
+DELETE {{baseUrl}}/posts/6/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+### 
+# фильтрация постов по автору
+GET {{baseUrl}}/posts/?owner=1
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+### 
+# фильтрация по дате
+GET {{baseUrl}}/posts/?created_at_before=2022-05-20
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+###
+# Создать пост
+POST {{baseUrl}}/posts/
+Content-Type: application/json
+Authorization: Token {{session_token}}
+
+{
+  "content": "weafiuhewru9fgdfg",
+  "parent_id": "1"
+}
+
+###
+# Просмотр постов из подписок
+GET {{baseUrl}}/feed/
+Content-Type: application/json
+Authorization: Token {{session_token}}

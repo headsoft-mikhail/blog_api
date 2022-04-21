@@ -1,6 +1,6 @@
 email_host = 'smtp.mail.ru'
-email_host_user = 'maafanasiev@mail.ru'
-email_host_token = 'DBFQaHMsghwCqp7wDLiT'
+email_host_user = 'mail@mail.ru'
+email_host_token = 'token'
 email_port = '465'
 email_use_ssl = True
 
@@ -14,8 +14,8 @@ postgres_password = 'postgres'
 postgres_host = '127.0.0.1'
 postgres_port = '5432'
 
-TEST_EMAIL_1 = 'maafanasiev@mail.ru'
-TEST_EMAIL_2 = 'a.mike@bk.ru'
+TEST_EMAIL_1 = 'mail1@mail.ru'
+TEST_EMAIL_2 = 'mail2@mail.ru'
 TEST_PASSWORD = 'user1_password'
 
 redis_host = '0.0.0.0'

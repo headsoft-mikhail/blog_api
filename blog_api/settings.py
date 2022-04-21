@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 import tokens
 
 
@@ -26,12 +27,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = tokens.django_secret_key
+# SECRET_KEY = tokens.django_secret_key
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = tokens.django_debug
+# DEBUG = tokens.django_debug
+DEBUG = bool(os.getenv('DJANGO_DEBUG'))
 
-ALLOWED_HOSTS = get_comma_separated_hosts(tokens.django_hosts)
+# ALLOWED_HOSTS = get_comma_separated_hosts(tokens.django_hosts)
+ALLOWED_HOSTS = get_comma_separated_hosts(os.getenv('DJANGO_ALLOWED_HOSTS'))
+
 
 # Application definition
 
@@ -81,14 +86,25 @@ WSGI_APPLICATION = 'blog_api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': tokens.postgres_name,
+#         'USER': tokens.postgres_user,
+#         'PASSWORD': tokens.postgres_password,
+#         'HOST': tokens.postgres_host,
+#         'PORT': tokens.postgres_port,
+#     }
+# }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': tokens.postgres_name,
-        'USER': tokens.postgres_user,
-        'PASSWORD': tokens.postgres_password,
-        'HOST': tokens.postgres_host,
-        'PORT': tokens.postgres_port,
+        'NAME': os.getenv('POSTGRES_DB'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('POSTGRES_HOST'),
+        'PORT': os.getenv('POSTGRES_PORT'),
     }
 }
 
@@ -162,12 +178,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_USE_TLS = True
-EMAIL_HOST = tokens.email_host
-EMAIL_HOST_USER = tokens.email_host_user
-EMAIL_HOST_PASSWORD = tokens.email_host_token
-EMAIL_PORT = tokens.email_port
-EMAIL_USE_SSL = tokens.email_use_ssl
-SERVER_EMAIL = tokens.email_host_user
+# EMAIL_HOST = tokens.email_host
+# EMAIL_HOST_USER = tokens.email_host_user
+# EMAIL_HOST_PASSWORD = tokens.email_host_token
+# EMAIL_PORT = tokens.email_port
+# EMAIL_USE_SSL = tokens.email_use_ssl
+# SERVER_EMAIL = tokens.email_host_user
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_HOST_USER = os.getenv('SERVER_EMAIL')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_PORT = os.getenv('EMAIL_PORT')
+EMAIL_USE_SSL = bool(os.getenv('EMAIL_USE_SSL'))
+SERVER_EMAIL = os.getenv('SERVER_EMAIL')
 
 DJANGO_REST_MULTITOKENAUTH_RESET_TOKEN_EXPIRY_TIME = 1
 DJANGO_REST_PASSWORDRESET_TOKEN_CONFIG = {
@@ -179,8 +201,10 @@ DJANGO_REST_PASSWORDRESET_TOKEN_CONFIG = {
 }
 
 # Redis settings
-REDIS_HOST = tokens.redis_host
-REDIS_PORT = tokens.redis_port
+# REDIS_HOST = tokens.redis_host
+# REDIS_PORT = tokens.redis_port
+REDIS_HOST = os.getenv('REDIS_HOST')
+REDIS_PORT = os.getenv('REDIS_PORT')
 
 # Celery settings
 CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
