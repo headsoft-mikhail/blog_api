@@ -68,7 +68,7 @@ Authorization: Token {{session_token}}
 ```
 docker-compose up
 ```
-При этом в файле  [./docker/django/emal.env](https://github.com/headsoft-mikhail/blog_api/blob/master/docker/django/email.env) необходимо указать корректные значения параметров
+При этом в файле  [./docker/django/email.env](https://github.com/headsoft-mikhail/blog_api/blob/master/docker/django/email.env) необходимо указать корректные значения параметров
 1. Добавлен простой DRF тротлинг
 1. Отправка почтовых сообщений вынесена в celery-приложение ([netology_pd_diplom/celery.py](https://github.com/headsoft-mikhail/netology_graduation/blob/master/netology_pd_diplom/celery.py), [backend/tasks.py](https://github.com/headsoft-mikhail/netology_graduation/blob/master/backend/tasks.py)). 
 
