@@ -10,5 +10,6 @@ RUN ["pip", "install", "-U", "pip"]
 RUN ["pip", "install", "-r", "requirements.txt"]
 RUN ["pip", "install", "psycopg2-binary==2.9.3", "gunicorn==20.1.0"]
 
+
 COPY . .
 CMD ["sh", "./start.sh"]

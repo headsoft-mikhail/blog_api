@@ -1,13 +1,11 @@
 # примеры API-запросов доступных для всех пользователей
 
-@baseUrl = http://127.0.0.1:8000/api/v1
 @baseUrl = http://0.0.0.0:8080/api/v1
 
-# @email = "hello2@hello.ru"
 @email = "maafanasiev@mail.ru"
 @password = "new_password2"
-@confirm_token = "f9a8d"
-@session_token = 9596d072c8c962bf80e8f63ece9691a8ba46724b
+@confirm_token = "2658a"
+@session_token = 4f1fc2e5c35ab0e011f35a4d69ce68cf49baf346
 @chng_pswrd_token = "f23a2"
 
 ###
@@ -71,7 +69,7 @@ Authorization: Token {{session_token}}
 
 ###
 # удалить пользователя
-DELETE {{baseUrl}}/accounts/1/
+DELETE {{baseUrl}}/accounts/4/
 Content-Type: application/json
 Authorization: Token {{session_token}}
 
